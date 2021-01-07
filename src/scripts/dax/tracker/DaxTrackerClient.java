@@ -14,7 +14,7 @@ import static org.tribot.api.General.getTRiBotUserID;
 
 class DaxTrackerClient {
 
-    private static final String BASE_URL = "http://localhost:8080/api/";
+    private static final String BASE_URL = "https://tracker.dax.cloud/api/";
 
     private final OkHttpClient okHttpClient;
     private final Gson gson;

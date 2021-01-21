@@ -24,10 +24,9 @@ public class DaxTracker {
 
     private static final long SECOND_IN_MILLIS = 1000;
     private static final long MINUTE_IN_MILLIS = 60 * SECOND_IN_MILLIS;
-    private static final long HOUR_IN_MILLIS = 60 * MINUTE_IN_MILLIS;
 
-    // IMPORTANT: Anything faster than will start to drop data and produce inaccurate results
-    private static final long FIXED_UPLOAD_PERIOD = HOUR_IN_MILLIS;
+    // IMPORTANT: Anything faster will start to drop data and produce inaccurate results
+    private static final long FIXED_UPLOAD_PERIOD = 5 * MINUTE_IN_MILLIS;
 
     private final DaxTrackerClient daxTrackerClient;
     private final Map<String, Long> data;

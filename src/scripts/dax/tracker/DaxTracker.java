@@ -1,6 +1,7 @@
 package scripts.dax.tracker;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.tribot.api.General;
 import org.tribot.util.Util;
 import scripts.dax.tracker.data.JwtContainer;
@@ -42,7 +43,7 @@ public class DaxTracker {
         this.data = new HashMap<>();
         this.lock = new ReentrantLock();
         this.timer = new Timer();
-        this.gson = new Gson();
+        this.gson = new GsonBuilder().disableHtmlEscaping().create();
         try {
             init();
         } catch (IOException e) {
@@ -69,8 +70,11 @@ public class DaxTracker {
 
     public void stop() {
         info("Stopping DaxTracker... Uploading remaining data before exit");
-        task().run();
         timer.cancel();
+        timer.purge();
+
+        // run one last time
+        task().run();
     }
 
     private TimerTask task() {
@@ -93,7 +97,7 @@ public class DaxTracker {
         try {
             this.daxTrackerClient.trackData(jwtContainer, this.userCredentials.getId(), map);
             info("Successfully uploaded data to DaxTracker servers");
-        } catch (IOException e) {
+        } catch (Exception e) {
             warn("Unable to track data... trying again next iteration. Error(%s)", e.getMessage());
             return false;
         }
@@ -106,7 +110,10 @@ public class DaxTracker {
         if (this.userCredentials == null) {
             warn("No existing DaxTracker account. Creating one...");
             this.userCredentials = this.daxTrackerClient.createUser(General.getTRiBotUsername());
-            Files.writeString(Path.of(getSettingsFilePath()), gson.toJson(this.userCredentials));
+            DaxLogger.info(userCredentials.getSecretKey());
+            String contents = gson.toJson(this.userCredentials);
+            DaxLogger.info("Created User: %s", contents);
+            Files.writeString(Path.of(getSettingsFilePath()), contents);
         }
 
         info("Loaded DaxTracker account from %s", getSettingsFilePath());
@@ -123,7 +130,9 @@ public class DaxTracker {
     }
 
     private String getSettingsFileContents() throws IOException {
-        return Files.readString(Path.of(getSettingsFilePath()));
+        String contents = Files.readString(Path.of(getSettingsFilePath()));
+        DaxLogger.info("Loaded contents for user credentials: %s", contents);
+        return contents;
     }
 
     private String getSettingsFilePath() {

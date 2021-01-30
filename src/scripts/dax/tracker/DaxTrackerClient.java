@@ -24,10 +24,10 @@ class DaxTrackerClient {
 
     DaxTrackerClient(String scriptId, String scriptSecret) {
         this.okHttpClient = new OkHttpClient.Builder()
-                .connectTimeout(8, TimeUnit.SECONDS)
-                .writeTimeout(8, TimeUnit.SECONDS)
-                .callTimeout(8, TimeUnit.SECONDS)
-                .readTimeout(12, TimeUnit.SECONDS)
+                .connectTimeout(4, TimeUnit.SECONDS)
+                .writeTimeout(4, TimeUnit.SECONDS)
+                .callTimeout(4, TimeUnit.SECONDS)
+                .readTimeout(4, TimeUnit.SECONDS)
                 .connectionPool(new ConnectionPool(0, 10L, TimeUnit.MINUTES))
                 .protocols(List.of(Protocol.HTTP_1_1))
                 .build();

@@ -13,8 +13,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -31,18 +31,20 @@ public class DaxTracker {
     private final DaxTrackerClient daxTrackerClient;
     private final Map<String, Long> data;
     private final Lock lock;
-    private final Timer timer;
     private final Gson gson;
 
     private JwtContainer jwtContainer;
     private UserCredentials userCredentials;
 
+    private ExecutorService executorService;
+    private boolean stopped;
+
     public DaxTracker(String scriptId, String secret) {
         this.daxTrackerClient = new DaxTrackerClient(scriptId, secret);
         this.data = new HashMap<>();
         this.lock = new ReentrantLock();
-        this.timer = new Timer();
         this.gson = new GsonBuilder().disableHtmlEscaping().create();
+        this.executorService = Executors.newSingleThreadExecutor();
         try {
             init();
         } catch (IOException e) {
@@ -64,32 +66,35 @@ public class DaxTracker {
 
     private void run() {
         info("Started DaxTracker with update frequency of %s", FIXED_UPLOAD_PERIOD);
-        timer.scheduleAtFixedRate(task(), 0, FIXED_UPLOAD_PERIOD);
+        executorService.submit(() -> {
+            try {
+                while (!stopped) {
+                    task();
+                    Thread.sleep(FIXED_UPLOAD_PERIOD);
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
     }
 
     public void stop() {
+        stopped = true;
         info("Stopping DaxTracker... Uploading remaining data before exit");
-        timer.cancel();
-        timer.purge();
-
+        executorService.shutdown();
         // run one last time
-        task().run();
+        task();
     }
 
-    private TimerTask task() {
-        return new TimerTask() {
-            @Override
-            public void run() {
-                lock.lock();
-                info("Uploading data to servers...");
-                try {
-                    if (data.isEmpty()) return;
-                    if (track(data)) data.clear();
-                } finally {
-                    lock.unlock();
-                }
-            }
-        };
+    private void task() {
+        lock.lock();
+        try {
+            info("Uploading data to servers...");
+            if (data.isEmpty()) return;
+            if (track(data)) data.clear();
+        } finally {
+            lock.unlock();
+        }
     }
 
     private boolean track(Map<String, Long> map) {
